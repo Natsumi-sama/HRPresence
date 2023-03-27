@@ -4,6 +4,7 @@ using System.IO;
 using System.Threading;
 using Tomlyn;
 using Tomlyn.Model;
+using Timer = System.Timers.Timer;
 
 namespace HRPresence
 {
@@ -26,17 +27,20 @@ namespace HRPresence
         public static bool isHRConnected;
         private static bool isHeartBeat;
         private static int currentHR;
+        private static string programDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
         private static void Main()
         {
             var config = new Config();
-            if (File.Exists("config.toml"))
+            var configLocation = Path.Combine(programDir, "config.toml");
+            var hrTxtLocation = Path.Combine(programDir, "HR.txt");
+            if (File.Exists(configLocation))
             {
-                config = Toml.ToModel<Config>(File.OpenText("config.toml").ReadToEnd());
+                config = Toml.ToModel<Config>(File.OpenText(configLocation).ReadToEnd());
             }
             else
             {
-                File.WriteAllText("config.toml", Toml.FromModel(config));
+                File.WriteAllText(configLocation, Toml.FromModel(config));
             }
 
             Console.CursorVisible = false;
@@ -52,11 +56,10 @@ namespace HRPresence
                 reading = heart;
                 currentHR = heart.BeatsPerMinute;
 
-                Console.Write($"{DateTime.Now}\n{currentHR} BPM\n");
-                Console.SetCursorPosition(0, 0);
+                Console.Write($"{DateTime.Now}: {currentHR} BPM\n");
 
                 lastUpdate = DateTime.Now;
-                File.WriteAllText("rate.txt", $"{currentHR}");
+                File.WriteAllText(hrTxtLocation, $"{currentHR}");
 
                 osc.Update(currentHR);
                 if (!isHeartBeat)
@@ -73,23 +76,24 @@ namespace HRPresence
 
                 if (DateTime.Now - lastUpdate > TimeSpan.FromSeconds(config.TimeOutInterval))
                 {
-                    Console.Write("Connecting...");
-                    Console.SetCursorPosition(0, 0);
+                    Console.Clear();
+                    Console.Write("Connecting...\n");
                     while (true)
                     {
                         try
                         {
                             heartrate.InitiateDefault();
                             isHRConnected = true;
+                            Console.Clear();
                             break;
                         }
                         catch (Exception e)
                         {
                             isHRConnected = false;
                             osc.Clear();
+                            Console.Clear();
                             Console.Write($"Failure while initiating heartrate service, retrying in {config.RestartDelay} seconds:\n");
                             Debug.WriteLine(e);
-                            Console.SetCursorPosition(0, 0);
                             Thread.Sleep((int)(config.RestartDelay * 1000));
                         }
                     }
@@ -114,7 +118,7 @@ namespace HRPresence
             // There's a 'temp' fix for it right now, but I'm not sure how it'll hold up
             float waitTime = default(float);
             try { waitTime = 1 / ((currentHR - 0.1f) / 60); } catch (DivideByZeroException) { /*Just a Divide by Zero Exception*/ }
-            new ExecuteInTime((int)(waitTime * 1000), (eit) =>
+            var executeInTime = new ExecuteInTime((int)(waitTime * 1000), eit =>
             {
                 osc.SendBeat();
                 HeartBeat();
@@ -123,27 +127,18 @@ namespace HRPresence
 
         public class ExecuteInTime
         {
-            public bool IsWaiting { get; private set; }
-            private System.Timers.Timer _timer;
-
+            private readonly Timer timer;
             public ExecuteInTime(int ms, Action<ExecuteInTime> callback)
             {
-                if (_timer != null)
-                {
-                    _timer.Stop();
-                    _timer.Close();
-                }
-                _timer = new System.Timers.Timer(ms);
-                _timer.AutoReset = false;
-                _timer.Elapsed += (sender, args) =>
+                timer = new Timer(ms);
+                timer.AutoReset = false;
+                timer.Elapsed += (sender, args) =>
                 {
                     callback.Invoke(this);
-                    IsWaiting = false;
-                    _timer.Stop();
-                    _timer.Close();
+                    timer.Stop();
+                    timer.Close();
                 };
-                _timer.Start();
-                IsWaiting = true;
+                timer.Start();
             }
         }
     }
