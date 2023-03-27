@@ -27,6 +27,8 @@ namespace HRPresence
         public static bool isHRConnected;
         private static bool isHeartBeat;
         private static int currentHR;
+        private static int peakBPM;
+        private static DateTime peakBPMTime;
         private static int rrInterval;
         private static string programDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
@@ -57,8 +59,17 @@ namespace HRPresence
                 reading = heart;
                 currentHR = heart.BeatsPerMinute;
                 rrInterval = heart.RRIntervals != null && heart.RRIntervals.Length > 0 && heart.RRIntervals[0] > 0 ? heart.RRIntervals[0] : 0;
+                
+                if (currentHR > peakBPM)
+                {
+                    peakBPM = currentHR;
+                    peakBPMTime = DateTime.Now;
+                }
 
-                Console.Write($"{DateTime.Now}: {currentHR} BPM\n");
+                Console.SetCursorPosition(0, 0);
+                Console.WriteLine($"{DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}".PadRight(32));
+                Console.WriteLine($"BPM: {currentHR}".PadRight(32));
+                Console.WriteLine($"Peak: {peakBPM} at {peakBPMTime.ToShortTimeString()}".PadRight(32));
 
                 lastUpdate = DateTime.Now;
                 File.WriteAllText(hrTxtLocation, $"{currentHR}");
