@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -27,6 +27,7 @@ namespace HRPresence
         public static bool isHRConnected;
         private static bool isHeartBeat;
         private static int currentHR;
+        private static int rrInterval;
         private static string programDir = Path.GetDirectoryName(System.Reflection.Assembly.GetExecutingAssembly().Location);
 
         private static void Main()
@@ -55,13 +56,14 @@ namespace HRPresence
             {
                 reading = heart;
                 currentHR = heart.BeatsPerMinute;
+                rrInterval = heart.RRIntervals != null && heart.RRIntervals.Length > 0 && heart.RRIntervals[0] > 0 ? heart.RRIntervals[0] : 0;
 
                 Console.Write($"{DateTime.Now}: {currentHR} BPM\n");
 
                 lastUpdate = DateTime.Now;
                 File.WriteAllText(hrTxtLocation, $"{currentHR}");
 
-                osc.Update(currentHR);
+                osc.Update(currentHR, rrInterval);
                 if (!isHeartBeat)
                     HeartBeat();
             };
@@ -110,19 +112,27 @@ namespace HRPresence
                 isHeartBeat = false;
                 return;
             }
+
             isHeartBeat = true;
 
-            // https://github.com/200Tigersbloxed/HRtoVRChat_OSC/blob/c73ae8224dfed35e743c0c436393607d5eb191e8/HRtoVRChat_OSC/Program.cs#L503
-            // When lowering the HR significantly, this will cause issues with the beat bool
-            // Dubbed the "Breathing Exercise" bug
-            // There's a 'temp' fix for it right now, but I'm not sure how it'll hold up
-            float waitTime = default(float);
-            try { waitTime = 1 / ((currentHR - 0.1f) / 60); } catch (DivideByZeroException) { /*Just a Divide by Zero Exception*/ }
-            var executeInTime = new ExecuteInTime((int)(waitTime * 1000), eit =>
+            // Use the class-level variable for the RR interval (in ms) as the wait time between heartbeats
+            int waitTime = rrInterval;
+            // If the RR interval is 0, use the old method of calculating the wait time
+            if (rrInterval == 0)
+                waitTime = defaultWaitTime(currentHR);
+
+            new ExecuteInTime(waitTime, (eit) =>
             {
                 osc.SendBeat();
+                // Recursively call HeartBeat() to maintain the heartbeat loop
                 HeartBeat();
             });
+        }
+
+        private static int defaultWaitTime(int currentHR)
+        {
+            float waitTime = 1 / ((currentHR - 0.1f) / 60);
+            return (int)(waitTime * 1000);
         }
 
         public class ExecuteInTime
