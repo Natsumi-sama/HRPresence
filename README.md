@@ -7,24 +7,25 @@ Simply connect any generic Bluetooth heartrate monitor to your computer and run 
 # config.toml
 
 # Restart if x seconds of no communication
-time_out_interval = 4.0
+time_out_interval = 3.0
 
 # Wait x seconds before restarting in case of any errors
-restart_delay = 4.0
+restart_delay = 3.0
 
-# the port to send OSC data to
-oscport = 9000
+# Write HR value to HR.txt
+write_to_txt = false
 ```
 
 ## OSC Parameters
 
-| Parameter       | Path                               | Description                        |
-|-----------------|------------------------------------|------------------------------------|
-| `HR`            | `/avatar/parameters/HR`            | actual heartrate as int            |
-| `onesHR`        | `/avatar/parameters/onesHR`        | ones digit                         |
-| `tensHR`        | `/avatar/parameters/tensHR`        | tens digit                         |
-| `hundredsHR`    | `/avatar/parameters/hundredsHR`    | hundreds digit                     |
-| `floatHR`       | `/avatar/parameters/floatHR`       | maps 0:255 to -1.0:1.0             |
-| `isHRBeat`      | `/avatar/parameters/isHRBeat`      | bool set when heart beats          |
-| `isHRConnected` | `/avatar/parameters/isHRConnected` | bool set when HR monitor connected |
-| `RRInterval`    | `/avatar/parameters/RRInterval`    | heart beat interval int in ms      |
+| Parameter         | Type    | Path                                 | Description                                        |
+| ----------------- | ------- | ------------------------------------ | -------------------------------------------------- |
+| `HR`              | `int`   | `/avatar/parameters/HR`              | actual heartrate value                             |
+| `onesHR`          | `int`   | `/avatar/parameters/onesHR`          | ones digit                                         |
+| `tensHR`          | `int`   | `/avatar/parameters/tensHR`          | tens digit                                         |
+| `hundredsHR`      | `int`   | `/avatar/parameters/hundredsHR`      | hundreds digit                                     |
+| `floatHR`         | `float` | `/avatar/parameters/floatHR`         | maps 0:255 to -1.0:1.0                             |
+| `isHRBeat`        | `bool`  | `/avatar/parameters/isHRBeat`        | set when heart beats                               |
+| `HeartBeatToggle` | `bool`  | `/avatar/parameters/HeartBeatToggle` | flip flops every heart beat                        |
+| `isHRConnected`   | `bool`  | `/avatar/parameters/isHRConnected`   | set when HR monitor connected                      |
+| `RRInterval`      | `int`   | `/avatar/parameters/RRInterval`      | heart beat interval int in ms (only for debugging) |
