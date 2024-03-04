@@ -21,7 +21,7 @@ internal class OscService
         "HeartBeatToggle"
     };
     
-    private readonly HashSet<string> _availableParameterList = new();
+    public readonly HashSet<string> AvailableParameterList = new();
     private readonly List<OscMessage> _oscMessages = new();
     private bool _heartBeatToggle;
 
@@ -34,7 +34,7 @@ internal class OscService
 
     public bool Update(int heartRate, int rrInterval)
     {
-        if (_availableParameterList.Count == 0 || _udp == null) 
+        if (AvailableParameterList.Count == 0 || _udp == null) 
             return true;
         
         // Maps the heart rate from [0;255] to [-1;+1]
@@ -55,7 +55,7 @@ internal class OscService
             _oscMessages.Clear();
             foreach (var (path, value) in data)
             {
-                if (!_availableParameterList.Contains(path))
+                if (!AvailableParameterList.Contains(path))
                     continue;
 
                 _oscMessages.Add(new OscMessage($"/avatar/parameters/{path}", value));
@@ -73,7 +73,7 @@ internal class OscService
 
     public void Clear()
     {
-        if (_availableParameterList.Count == 0 || _udp == null) 
+        if (AvailableParameterList.Count == 0 || _udp == null) 
             return;
         
         var data = new (string, object)[]
@@ -92,7 +92,7 @@ internal class OscService
             _oscMessages.Clear();
             foreach (var (path, value) in data)
             {
-                if (!_availableParameterList.Contains(path))
+                if (!AvailableParameterList.Contains(path))
                     continue;
 
                 _oscMessages.Add(new OscMessage($"/avatar/parameters/{path}", value));
@@ -108,10 +108,10 @@ internal class OscService
 
     public void SendBeat()
     {
-        if (_availableParameterList.Count == 0 || _udp == null) 
+        if (AvailableParameterList.Count == 0 || _udp == null) 
             return;
         
-        if (_availableParameterList.Contains("HeartBeatToggle"))
+        if (AvailableParameterList.Contains("HeartBeatToggle"))
         {
             _heartBeatToggle = !_heartBeatToggle;
             try
@@ -125,7 +125,7 @@ internal class OscService
             }
         }
         
-        if (!_availableParameterList.Contains("isHRBeat"))
+        if (!AvailableParameterList.Contains("isHRBeat"))
             return;
         
         try
@@ -144,14 +144,14 @@ internal class OscService
     
     public void UpdateAvailableParameters(Dictionary<string, object?> parameterList)
     {
-        _availableParameterList.Clear();
+        AvailableParameterList.Clear();
         foreach (var parameter in parameterList.Keys)
         {
             var parameterName = parameter.Replace("/avatar/parameters/", "");
             if (_parameterList.Contains(parameterName))
-                _availableParameterList.Add(parameterName);
+                AvailableParameterList.Add(parameterName);
         }
         
-        Console.WriteLine($"Found {_availableParameterList.Count} parameters");
+        Console.WriteLine($"Found {AvailableParameterList.Count} parameters");
     }
 }

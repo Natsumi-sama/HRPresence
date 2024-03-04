@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using System.Net;
-using System.Reflection;
 using OscQueryLibrary;
 using Tomlyn;
 using Tomlyn.Model;
@@ -12,6 +11,7 @@ internal class Config : ITomlMetadataProvider
     public float TimeOutInterval { get; set; } = 3f;
     public float RestartDelay { get; set; } = 3f;
     public bool WriteToTxt { get; set; } = false;
+    public bool QuestStandalone { get; set; } = false;
     public TomlPropertiesMetadata PropertiesMetadata { get; set; }
 }
 
@@ -77,6 +77,29 @@ internal class Program
             }, // optional callback on vrc discovery
             oscSender.UpdateAvailableParameters // parameter list callback on vrc discovery
         );
+
+        if (config.QuestStandalone)
+        {
+            // listen for VRC on every network interface
+            var host = Dns.GetHostEntry(Dns.GetHostName());
+            foreach (var ip in host.AddressList)
+            {
+                if (ip.AddressFamily != System.Net.Sockets.AddressFamily.InterNetwork)
+                    continue;
+            
+                var ipAddress = ip.ToString();
+                _ = new OscQueryServer(
+                    "HRMonitor", // service name
+                    ipAddress, // ip address for udp and http server
+                    () =>
+                    {
+                        oscSender.Initialize(ip, OscQueryServer.OscSendPort);
+                        oscReceiver.ListenForOscMessages(OscQueryServer.OscReceivePort);
+                    }, // optional callback on vrc discovery
+                    oscSender.UpdateAvailableParameters // parameter list callback on vrc discovery
+                );
+            }
+        }
         
         heartrate = new HeartRateService();
         heartrate.HeartRateUpdated += heart =>
@@ -106,6 +129,7 @@ internal class Program
             if (minBPM != int.MaxValue) Console.WriteLine($"Min: {minBPM} at {minBPMTime.ToShortTimeString()}".PadRight(32));
             Console.WriteLine($"ConnectionCount: {connectionCount}".PadRight(32));
             if (rrInterval > 0) Console.WriteLine($"RR: {rrInterval}".PadRight(32));
+            Console.WriteLine($"Avatar Parameters: {oscSender.AvailableParameterList.Count}".PadRight(32));
 
             lastUpdate = DateTime.Now;
             if (config.WriteToTxt)

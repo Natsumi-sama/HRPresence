@@ -14,6 +14,9 @@ restart_delay = 3.0
 
 # Write HR value to HR.txt
 write_to_txt = false
+
+# Support Quest in standalone mode
+quest_standalone = false
 ```
 
 ## OSC Parameters
